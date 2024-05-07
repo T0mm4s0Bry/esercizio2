@@ -1,67 +1,61 @@
 package com.example.backend4f;
 
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
 
-@WebServlet(name = "helloServlet", value = "/hello-servlet")
-public class LoginServlet extends HttpServlet {
+import java.io.*;
+import java.util.ArrayList;
 
-    public void init() {
+@WebServlet(name = "Voti", value = "/Voti")
+public class VotiServlet extends HttpServlet {
 
-    }
-
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String Utente = "";
-        int flag = 0;
-        String User = "";
-        String Password = "";
-        String Username = (request.getParameter("Username"));
-        String pass = (request.getParameter("pass"));
-        BufferedReader br = new BufferedReader(new FileReader("login.txt"));
-        String riga = br.readLine();
-        boolean Corretto = true;
-        while(riga != null){
-            flag = 0;
-            User = "";
-            Password = "";
-            for(int i=0; i< riga.length(); i++){
-                if( riga.charAt(i) != ' '){
-                    if (flag == 0){
-                        User = User + riga.charAt(i);
-                    }else{
-                        Password = Password + riga.charAt(i);
-                    }
-                }else{
-                    flag = 1;
+    public static int[] getGradesByUsername(String username, String filePath) {
+        File file = new File(filePath);
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith(username + " ")) {
+                    return parseGrades(line);
                 }
             }
-
-            if(User.equals(Username) && (Password.equals(pass))){
-                Corretto = true;
-                Utente = Username;
-            }
+        } catch (IOException e) {
+            System.out.println("Error reading the file: " + e.getMessage());
         }
-
-        if (Corretto == true){
-            HttpSession session = request.getSession(true);
-            session.setAttribute("messaggio",Utente);
-            response.sendRedirect("/voti");
-        }else{
-            HttpSession session = request.getSession(true);
-            String messaggio = "Username o Password sbagliate";
-            session.setAttribute("error",messaggio);
-            response.sendRedirect("/Errori");
-        }
+        return new int[]{};  // Return empty array if username is not found
     }
 
-    public void destroy() {
+    private static int[] parseGrades(String data) {
+        // Expect data in format "username [grade1, grade2, grade3, ...]"
+        int startIndex = data.indexOf('[') + 1;
+        int endIndex = data.indexOf(']');
+        if (startIndex < 0 || endIndex < 0) return new int[]{};
+
+        String gradesString = data.substring(startIndex, endIndex).trim();
+        if (gradesString.isEmpty()) return new int[]{};
+
+        String[] gradesArray = gradesString.split(",\\s*");
+        int[] grades = new int[gradesArray.length];
+        for (int i = 0; i < gradesArray.length; i++) {
+            try {
+                grades[i] = Integer.parseInt(gradesArray[i]);
+            } catch (NumberFormatException e) {
+                System.out.println("Failed to parse grade: " + gradesArray[i]);
+                return new int[]{};  // Return empty array in case of parsing error
+            }
+        }
+        return grades;
+    }
+
+    public static void main(String[] args) {
+        String filePath = "voti.txt";  // Update with the actual file path
+        String username = "alice.morgan";
+        int[] grades = getGradesByUsername(username, filePath);
+        if (grades.length > 0) {
+            System.out.println("Grades for " + username + ":");
+            for (int grade : grades) {
+                System.out.print(grade + " ");
+            }
+        } else {
+            System.out.println("No grades found for " + username);
+        }
     }
 }

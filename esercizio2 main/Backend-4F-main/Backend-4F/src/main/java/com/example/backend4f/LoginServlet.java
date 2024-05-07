@@ -1,67 +1,57 @@
 package com.example.backend4f;
 
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-
-@WebServlet(name = "helloServlet", value = "/hello-servlet")
+@WebServlet(name = "Login", value = "/Login")
 public class LoginServlet extends HttpServlet {
 
-    public void init() {
+    private static final Map<String, String> credentials = new HashMap<>();
 
-    }
+    /**
+     * Carica le credenziali da un file di testo.
+     *
+     * @param filePath Il percorso del file contenente le credenziali.
+     */
+    public static void loadCredentials(String filePath) {
+        File file = new File(filePath);
 
-    public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
-        String Utente = "";
-        int flag = 0;
-        String User = "";
-        String Password = "";
-        String Username = (request.getParameter("Username"));
-        String pass = (request.getParameter("pass"));
-        BufferedReader br = new BufferedReader(new FileReader("login.txt"));
-        String riga = br.readLine();
-        boolean Corretto = true;
-        while(riga != null){
-            flag = 0;
-            User = "";
-            Password = "";
-            for(int i=0; i< riga.length(); i++){
-                if( riga.charAt(i) != ' '){
-                    if (flag == 0){
-                        User = User + riga.charAt(i);
-                    }else{
-                        Password = Password + riga.charAt(i);
-                    }
-                }else{
-                    flag = 1;
+        try (Scanner scanner = new Scanner(file)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split(" ", 2); // Supponiamo che username e password siano separati da uno spazio
+                if (parts.length == 2) {
+                    credentials.put(parts[0], parts[1]);
                 }
             }
-
-            if(User.equals(Username) && (Password.equals(pass))){
-                Corretto = true;
-                Utente = Username;
-            }
-        }
-
-        if (Corretto == true){
-            HttpSession session = request.getSession(true);
-            session.setAttribute("messaggio",Utente);
-            response.sendRedirect("/voti");
-        }else{
-            HttpSession session = request.getSession(true);
-            String messaggio = "Username o Password sbagliate";
-            session.setAttribute("error",messaggio);
-            response.sendRedirect("/Errori");
+        } catch (FileNotFoundException e) {
+            System.out.println("File non trovato: " + filePath);
+            e.printStackTrace();
         }
     }
 
-    public void destroy() {
+    /**
+     * Verifica se la coppia di username e password esiste nel file.
+     *
+     * @param user L'username da verificare.
+     * @param pass La password da verificare.
+     * @return true se la coppia esiste, altrimenti false.
+     */
+    public static boolean authenticate(String user, String pass) {
+        return credentials.getOrDefault(user, "").equals(pass);
+    }
+
+    public static void main(String[] args) {
+        // Carica le credenziali dal file
+        System.out.println(System.getProperty("user.dir"));
+        loadCredentials("login.txt");
+
+        // Test del metodo authenticate
+        System.out.println(authenticate("alice.morgan", "strongP@ssw0rd!")); // true
+        System.out.println(authenticate("bob.smith", "wrongpassword")); // false
+        System.out.println(authenticate("nonexistentuser", "password")); // false
     }
 }
